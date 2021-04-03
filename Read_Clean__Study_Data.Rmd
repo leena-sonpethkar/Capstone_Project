@@ -1,0 +1,231 @@
+---
+title: "Capstone Project (Week 2) - Milestone Report"
+author: "Leena Sonpethkar"
+date: "March 18, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## SwiftKey Capstone Project 
+### Synopsis
+
+The objectives for this project is to: 
+1. Demonstrate given data has been downloaded and loaded successfully for project
+2. Basic report of summary statistics about the data sets. 
+3. Report any interesting findings that are found so far.
+
+In my project, I will be performing the following steps: 
+1. Download the data and load the data 
+2. Pull random samples of the data i.e. sampling which will reduce size significantly and also help in faster processing. 
+3. Some initial cleaning of the data. 
+4. Pull some basic statistics 
+5. Create some simple bar plots and word clouds for 1-4 word sequences 
+6. Summary my findings and talk about what I will likely do going forward thru the rest of the class.
+
+```{r, echo=FALSE, message=FALSE}
+library(dplyr)
+library(R.utils)
+library(stringi)
+library(tm)
+library(RWeka)
+library(ggplot2)
+library(wordcloud2)
+```
+
+```{r, echo=TRUE, message=TRUE}
+zipUrl <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+zipFile <- paste("Data", "Coursera-SwiftKey.zip", sep = "/")
+
+# Download data/zip file 
+if (!file.exists(zipFile)) {
+  download.file(zipUrl, zipFile, mode = "wb")
+}
+#Set Path file names
+dataPath <- "Data/final/en_US"
+infoBL <- paste(dataPath, "en_US.blogs.txt", sep = "/")
+infoNW <- paste(dataPath, "en_US.news.txt", sep = "/")
+infoTW <- paste(dataPath, "en_US.twitter.txt", sep = "/")
+
+# Unzip data file 
+if (!file.exists(file.path(infoBL))) {
+  unzip(zipFile, exdir = "/Data")
+}
+```
+### Basic report of summary statistics about the data sets. 
+To understand the depth of the dataset, let’s run some basic statistics on the text in the 3 files (blogs, news & twitter). We will calculate the total number of lines, characters and words in the data as well as minimum, average (mean) and maximum word counts for any the 3 data files.
+
+```{r, echo=TRUE}
+#Open connection and Read Data
+conBL <- file(file.path(paste(getwd(), infoBL, sep = "/")), "r") 
+conNW <- file(file.path(paste(getwd(), infoNW, sep = "/")), "r") 
+conTW <- file(file.path(paste(getwd(), infoTW, sep = "/")), "r") 
+
+rdBL <- readLines(conBL, warn=FALSE, encoding="UTF-8")
+rdNW <- readLines(conNW, warn=FALSE, encoding="UTF-8")
+rdTW <- readLines(conTW, warn=FALSE, encoding="UTF-8") 
+
+#size
+infoBL[2] <- file.info(paste(getwd(), infoBL, sep = "/"))$size/1048576
+infoNW[2] <- file.info(paste(getwd(), infoNW, sep = "/"))$size/1048576
+infoTW[2] <- file.info(paste(getwd(), infoTW, sep = "/"))$size/1048576
+
+#No. of lines
+infoBL[3] <- length(rdBL)
+infoNW[3] <- length(rdNW)
+infoTW[3] <- length(rdTW)
+
+#nu. of chars
+infoBL[4] <- sum(stri_count_words(rdBL))
+infoNW[4] <- sum(stri_count_words(rdNW))
+infoTW[4] <- sum(stri_count_words(rdTW))
+
+#max length
+infoBL[5] <- max(nchar(rdBL))
+infoNW[5] <- max(nchar(rdNW))
+infoTW[5] <- max(nchar(rdTW))
+
+
+df1 <- data.frame(matrix(c(infoBL,infoNW, infoTW),nrow = 3, ncol = 5, byrow = TRUE))
+colnames(df1) <- c("file name", "size(MB)", "num.of.lines", "num.of.chars", "longest.line")
+df1
+```
+###Sampling the data
+Random sample of 3% of data from each file will be used for initial analysis.
+This is to allow us to provide a faster look at the data to see what we see and decide on the next steps before analyzing the entire data files.
+
+A Corpus is created based on the 3 samples.
+```{r, echo=TRUE}
+set.seed(190321)
+
+dtBL_sample <- sample(rdBL, length(rdBL)*.03)
+dtNW_sample <- sample(rdNW, length(rdNW)*.03)
+dtTW_sample <- sample(rdTW, length(rdTW)*.03)
+
+combined_sample <- c(dtBL_sample, dtNW_sample, dtTW_sample)
+combined_sample <- iconv(combined_sample, "UTF-8","ASCII", sub="")
+length(combined_sample)
+rm(dtBL_sample, dtNW_sample, dtTW_sample, rdBL, rdNW, rdTW)
+```
+### Exploration and Data Cleaning
+
+This section will use the text mining library ‘tm’ (loaded previously) to perform Data cleaning tasks, which are meaningful in Predictive Text Analytics. Main cleaning steps are:
+
+1.Converting the document to lowercase
+
+2.Removing punctuation marks
+
+3.Removing numbers
+
+4.Removing stopwords (i.e. “and”, “or”, “not”, “is”, etc)
+
+5.Plain Text Conversion
+
+6.Removing extra whitespaces generated in previous 5 steps
+
+```{r, echo=TRUE}
+corpus <- VCorpus(VectorSource(combined_sample))
+corpus <- tm_map(corpus, tolower)  #1
+corpus <- tm_map(corpus, removePunctuation) #2
+corpus <- tm_map(corpus, removeNumbers) #3
+corpus <- tm_map(corpus, removeWords, stopwords("english")) #4
+corpus <- tm_map(corpus, PlainTextDocument) #5
+corpus <- tm_map(corpus, stripWhitespace) #6
+```
+### Analysis of the cleaned data
+Data has been cleaned up, and can be analysed now.
+
+1. Checking of more frequent words, like what are the distributions of word frequencies?
+
+2.What are the frequencies of 2-grams and 3-grams in the dataset?
+
+Task of Tokenization of data:
+- Unigram (1-Gram), Bigram (2-Gram), Trigram (3-Gram)
+```{r, echo=TRUE}
+unigram <- function(x) NGramTokenizer(x, Weka_control(min = 1, max = 1))
+unigram_tdm <- TermDocumentMatrix(corpus, control = list(tokenize = unigram))
+unigram_freqTerm <- findFreqTerms(unigram_tdm,lowfreq = 40)
+unigram_freq <- rowSums(as.matrix(unigram_tdm[unigram_freqTerm,]))
+unigram_ord <- order(unigram_freq, decreasing = TRUE)
+unigram_freq <- data.frame(word=names(unigram_freq[unigram_ord]), frequency=unigram_freq[unigram_ord])
+
+
+bigram <- function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2))
+bigram_tdm <- TermDocumentMatrix(corpus, control = list(tokenize = bigram))
+bigram_freqTerm <- findFreqTerms(bigram_tdm,lowfreq=40)
+bigram_freq <- rowSums(as.matrix(bigram_tdm[bigram_freqTerm,]))
+bigram_ord <- order(bigram_freq, decreasing = TRUE)
+bigram_freq <- data.frame(word=names(bigram_freq[bigram_ord]), frequency=bigram_freq[bigram_ord])
+
+
+trigram <- function(x) NGramTokenizer(x, Weka_control(min = 3, max = 3))
+trigram_tdm <- TermDocumentMatrix(corpus, control = list(tokenize = trigram))
+trigram_freqTerm <- findFreqTerms(trigram_tdm,lowfreq=10)
+trigram_freq <- rowSums(as.matrix(trigram_tdm[trigram_freqTerm,]))
+trigram_ord <- order(trigram_freq, decreasing = TRUE)
+trigram_freq <- data.frame(word=names(trigram_freq[trigram_ord]), frequency=trigram_freq[trigram_ord])
+
+quadgram <- function(x) NGramTokenizer(x, Weka_control(min = 4, max = 4))
+quadgram_tdm <- TermDocumentMatrix(corpus, control = list(tokenize = quadgram))
+quadgram_freqTerm <- findFreqTerms(quadgram_tdm,lowfreq=10)
+
+quadgram_freq <- rowSums(as.matrix(quadgram_tdm[quadgram_freqTerm,]))
+quadgram_ord <- order(quadgram_freq, decreasing = TRUE)
+quadgram_freq <- data.frame(word=names(quadgram_freq[quadgram_ord]), frequency=quadgram_freq[quadgram_ord])
+```
+### Printing Charts
+#### Histogram of the Top 25 Unigrams (1-gram)
+```{r, echo=TRUE}
+ggplot(unigram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency)) +
+  geom_bar(stat = 'identity', fill='blue', width = 0.7)+
+  theme(axis.text.x=element_text(angle=90))+
+  xlab('1-gram')+
+  ylab('Frequency')
+```
+#### Histogram  and word cloud of the Top 25 Bigrams (2-grams)
+```{r, echo=TRUE}
+ggplot(bigram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency)) +
+  geom_bar(stat = 'identity', fill='red', width = 0.7)+
+  theme(axis.text.x=element_text(angle=90))+
+  xlab('2-gram')+
+  ylab('Frequency')
+
+wordcloud2(bigram_freq[1:25,])
+```
+#### Histogram and word cloude of the Top 25 Trigrams (3-grams)
+```{r, echo=TRUE}
+ggplot(trigram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency)) +
+  geom_bar(stat = 'identity', fill='orange', width = 0.7)+
+  theme(axis.text.x=element_text(angle=90))+
+  xlab('3-gram')+
+  ylab('Frequency')
+
+wordcloud2(trigram_freq[1:25,])
+```
+#### Histogram of the Top 25 Quadragrams (4-grams)
+```{r, echo=TRUE}
+ggplot(quadgram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency)) +
+  geom_bar(stat = 'identity', fill='purple', width = 0.7)+
+  theme(axis.text.x=element_text(angle=90))+
+  xlab('4-gram')+
+  ylab('Frequency')
+```
+### Findings
+It's a huge data, inititially I tried picking 10% of sample data then 5% of sample data, but encounter memory warnings, hence finalized on 3% sample data.
+
+There are still some accents that weren’t completely removed in the cleaning step; it would be cleaner for the algorithm to remove those in a second cleaning round.
+
+The longer the N-gram, the less frequent they become.
+
+### Future Plans
+• For this analysis, only 3% of data from each set, were sampled. It would be interesting to get a wider sample for the prediction algorithm (80% modelling/ 20% testing)
+•When satisfied with a more representative and better-cleaned sample data, the algorithm can be implemented and refined (code optimization) as testing along
+•Last step would be implementing the Shiny application
+
+```{r, echo=TRUE}
+#Close connection
+rm(corpus)
+rm(conBL, conNW, conTW)
+```
