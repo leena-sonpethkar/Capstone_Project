@@ -13,16 +13,25 @@ knitr::opts_chunk$set(echo = TRUE)
 ### Synopsis
 
 The objectives for this project is to: 
+
 1. Demonstrate given data has been downloaded and loaded successfully for project
+
 2. Basic report of summary statistics about the data sets. 
+
 3. Report any interesting findings that are found so far.
 
 In my project, I will be performing the following steps: 
+
 1. Download the data and load the data 
+
 2. Pull random samples of the data i.e. sampling which will reduce size significantly and also help in faster processing. 
+
 3. Some initial cleaning of the data. 
+
 4. Pull some basic statistics 
+
 5. Create some simple bar plots and word clouds for 1-4 word sequences 
+
 6. Summary my findings and talk about what I will likely do going forward thru the rest of the class.
 
 ```{r, echo=FALSE, message=FALSE}
@@ -106,24 +115,27 @@ dtTW_sample <- sample(rdTW, length(rdTW)*.03)
 
 combined_sample <- c(dtBL_sample, dtNW_sample, dtTW_sample)
 combined_sample <- iconv(combined_sample, "UTF-8","ASCII", sub="")
+
 length(combined_sample)
-rm(dtBL_sample, dtNW_sample, dtTW_sample, rdBL, rdNW, rdTW)
+
+#Clear memory by removing unwanted dataframes
+#rm(dtBL_sample, dtNW_sample, dtTW_sample, rdBL, rdNW, rdTW)
 ```
 ### Exploration and Data Cleaning
 
 This section will use the text mining library ‘tm’ (loaded previously) to perform Data cleaning tasks, which are meaningful in Predictive Text Analytics. Main cleaning steps are:
 
-1.Converting the document to lowercase
+1. Converting the document to lowercase
 
-2.Removing punctuation marks
+2. Removing punctuation marks
 
-3.Removing numbers
+3. Removing numbers
 
-4.Removing stopwords (i.e. “and”, “or”, “not”, “is”, etc)
+4. Removing stopwords (i.e. “and”, “or”, “not”, “is”, etc)
 
-5.Plain Text Conversion
+5. Plain Text Conversion
 
-6.Removing extra whitespaces generated in previous 5 steps
+6. Removing extra whitespaces generated in previous 5 steps
 
 ```{r, echo=TRUE}
 corpus <- VCorpus(VectorSource(combined_sample))
@@ -139,7 +151,7 @@ Data has been cleaned up, and can be analysed now.
 
 1. Checking of more frequent words, like what are the distributions of word frequencies?
 
-2.What are the frequencies of 2-grams and 3-grams in the dataset?
+2. What are the frequencies of 2-grams and 3-grams in the dataset?
 
 Task of Tokenization of data:
 - Unigram (1-Gram), Bigram (2-Gram), Trigram (3-Gram)
@@ -184,6 +196,7 @@ ggplot(unigram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency))
   xlab('1-gram')+
   ylab('Frequency')
 ```
+
 #### Histogram  and word cloud of the Top 25 Bigrams (2-grams)
 ```{r, echo=TRUE}
 ggplot(bigram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency)) +
@@ -194,6 +207,7 @@ ggplot(bigram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency)) 
 
 wordcloud2(bigram_freq[1:25,])
 ```
+
 #### Histogram and word cloude of the Top 25 Trigrams (3-grams)
 ```{r, echo=TRUE}
 ggplot(trigram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency)) +
@@ -204,6 +218,7 @@ ggplot(trigram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency))
 
 wordcloud2(trigram_freq[1:25,])
 ```
+
 #### Histogram of the Top 25 Quadragrams (4-grams)
 ```{r, echo=TRUE}
 ggplot(quadgram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency)) +
@@ -212,17 +227,19 @@ ggplot(quadgram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency)
   xlab('4-gram')+
   ylab('Frequency')
 ```
+
 ### Findings
-It's a huge data, inititially I tried picking 10% of sample data then 5% of sample data, but encounter memory warnings, hence finalized on 3% sample data.
+- It's a huge data, inititially I tried picking 10% of sample data then 5% of sample data, but encounter memory warnings, hence finalized on 3% sample data.
 
-There are still some accents that weren’t completely removed in the cleaning step; it would be cleaner for the algorithm to remove those in a second cleaning round.
+- 100099
+- There are still some accents that weren’t completely removed in the cleaning step; it would be cleaner for the algorithm to remove those in a second cleaning round.
 
-The longer the N-gram, the less frequent they become.
+- The longer the N-gram, the less frequent they become.
 
 ### Future Plans
-• For this analysis, only 3% of data from each set, were sampled. It would be interesting to get a wider sample for the prediction algorithm (80% modelling/ 20% testing)
-•When satisfied with a more representative and better-cleaned sample data, the algorithm can be implemented and refined (code optimization) as testing along
-•Last step would be implementing the Shiny application
+- For this analysis, only 3% of data from each set, were sampled. It would be interesting to get a wider sample for the prediction algorithm (80% modelling/ 20% testing)
+- When satisfied with a more representative and better-cleaned sample data, the algorithm can be implemented and refined (code optimization) as testing along
+- Last step would be implementing the Shiny application
 
 ```{r, echo=TRUE}
 #Close connection
