@@ -1,0 +1,214 @@
+---
+title: "Clean_Data_to_NLP"
+author: "Leena Sonpethkar"
+date: "April 8, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## SwiftKey Capstone Project 
+### Synopsis
+
+The objectives for this project is to: 
+
+1. Demonstrate given data has been downloaded and loaded successfully for project
+
+2. Basic report of summary statistics about the data sets. 
+
+3. Report any interesting findings that are found so far.
+
+In my project, I will be performing the following steps: 
+
+1. Download the data and load the data 
+
+2. Pull random samples of the data i.e. sampling which will reduce size significantly and also help in faster processing. 
+
+3. Some initial cleaning of the data. 
+
+4. Pull some basic statistics 
+
+5. Create some simple bar plots and word clouds for 1-4 word sequences 
+
+6. Summary my findings and talk about what I will likely do going forward thru the rest of the class.
+
+```{r, echo=FALSE, message=FALSE}
+library(dplyr)
+library(R.utils)
+library(stringi)
+library(tm)
+library(RWeka)
+library(ggplot2)
+library(wordcloud2)
+```
+
+```{r, echo=TRUE, message=TRUE}
+zipUrl <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+zipFile <- paste("Data", "Coursera-SwiftKey.zip", sep = "/")
+
+# Download data/zip file 
+if (!file.exists(zipFile)) {
+  download.file(zipUrl, zipFile, mode = "wb")
+}
+#Set Path file names
+dataPath <- "Data/final/en_US"
+infoBL <- paste(dataPath, "en_US.blogs.txt", sep = "/")
+infoNW <- paste(dataPath, "en_US.news.txt", sep = "/")
+infoTW <- paste(dataPath, "en_US.twitter.txt", sep = "/")
+
+# Unzip data file 
+if (!file.exists(file.path(infoBL))) {
+  unzip(zipFile, exdir = "/Data")
+}
+```
+### Basic report of summary statistics about the data sets. 
+To understand the depth of the dataset, let’s run some basic statistics on the text in the 3 files (blogs, news & twitter). We will calculate the total number of lines, characters and words in the data as well as minimum, average (mean) and maximum word counts for any the 3 data files.
+
+```{r, echo=TRUE}
+#Open connection and Read Data
+conBL <- file(file.path(paste(getwd(), infoBL, sep = "/")), "r") 
+conNW <- file(file.path(paste(getwd(), infoNW, sep = "/")), "r") 
+conTW <- file(file.path(paste(getwd(), infoTW, sep = "/")), "r") 
+
+rdBL <- readLines(conBL, warn=FALSE, encoding="UTF-8", skipNul = TRUE)
+rdNW <- readLines(conNW, warn=FALSE, encoding="UTF-8", skipNul = TRUE)
+rdTW <- readLines(conTW, warn=FALSE, encoding="UTF-8", skipNul = TRUE) 
+
+#size
+infoBL[2] <- file.info(paste(getwd(), infoBL, sep = "/"))$size/1048576
+infoNW[2] <- file.info(paste(getwd(), infoNW, sep = "/"))$size/1048576
+infoTW[2] <- file.info(paste(getwd(), infoTW, sep = "/"))$size/1048576
+
+#No. of lines
+infoBL[3] <- length(rdBL)
+infoNW[3] <- length(rdNW)
+infoTW[3] <- length(rdTW)
+
+#nu. of chars
+infoBL[4] <- sum(stri_count_words(rdBL))
+infoNW[4] <- sum(stri_count_words(rdNW))
+infoTW[4] <- sum(stri_count_words(rdTW))
+
+#max length
+infoBL[5] <- max(nchar(rdBL))
+infoNW[5] <- max(nchar(rdNW))
+infoTW[5] <- max(nchar(rdTW))
+
+
+df1 <- data.frame(matrix(c(infoBL,infoNW, infoTW),nrow = 3, ncol = 5, byrow = TRUE))
+colnames(df1) <- c("file name", "size(MB)", "num.of.lines", "num.of.chars", "longest.line")
+df1
+```
+###Sampling the data
+Random sample of 3% of data from each file will be used for initial analysis.
+This is to allow us to provide a faster look at the data to see what we see and decide on the next steps before analyzing the entire data files.
+
+A Corpus is created based on the 3 samples.
+```{r, echo=TRUE}
+set.seed(190421)
+
+dtBL_sample <- sample(rdBL, length(rdBL)*.0)
+dtNW_sample <- sample(rdNW, length(rdNW)*.0)
+dtTW_sample <- sample(rdTW, length(rdTW)*.75)
+
+combined_sample <- c(dtBL_sample, dtNW_sample, dtTW_sample)
+combined_sample <- iconv(combined_sample, "UTF-8","ASCII", sub="")
+
+length(combined_sample)
+
+#Clear memory by removing unwanted dataframes
+#rm(dtBL_sample, dtNW_sample, dtTW_sample, rdBL, rdNW, rdTW)
+rm(dtBL_sample, dtNW_sample, rdBL, rdNW, rdTW)
+```
+
+```{r, echo=TRUE}
+#combined_sample <- iconv(rdTW, "UTF-8","ASCII", sub="")
+
+
+corpus <- VCorpus(VectorSource(combined_sample))
+corpus <- tm_map(corpus, tolower)  #1
+corpus <- tm_map(corpus, removePunctuation) #2
+corpus <- tm_map(corpus, removeNumbers) #3
+corpus <- tm_map(corpus, removeWords, stopwords("english")) #4
+corpus <- tm_map(corpus, PlainTextDocument) #5
+corpus <- tm_map(corpus, stripWhitespace) #6
+
+#file.path(paste(getwd(), infoBL, sep = "/"))
+
+#tidy_comb_sample = paste(dataPath, "tidy_comb_sample_en.rds", sep = "/")
+
+#writeCorpus(corpus, path = dataPath, filenames = paste("tidy_comb_sample_en", ".txt", sep = ""))
+
+#saveRDS(corpus, file=tidy_comb_sample)
+```
+
+```{r, echo=TRUE}
+
+
+trigram <- function(x) NGramTokenizer(x, Weka_control(min = 3, max = 3))
+                                      #, delimiters = "\\r\\n\\t.,;:\"()?!")
+trigram_tdm <- TermDocumentMatrix(corpus, control = list(tokenize = trigram))
+#trigram_freqTerm <- findFreqTerms(trigram_tdm,lowfreq=50)
+#trigram_freq <- rowSums(as.matrix(trigram_tdm[trigram_freqTerm,]))
+#trigram_ord <- order(trigram_freq, decreasing = TRUE)
+#trigram_freq <- data.frame(word=names(trigram_freq[trigram_ord]), frequency=trigram_freq[trigram_ord])
+
+triGramDf <- data.frame(table(trigram_tdm)) 
+
+sanitizeGramDf <- function(df) { 
+newDf <- data.frame(Term = as.character(df[, 1]), Count = df[, 2]) 
+newDf 
+} 
+  
+triGramDf <- sanitizeGramDf(triGramDf) 
+  
+sortGramDf <- function(df) { 
+ df[order(df$Count, decreasing = TRUE), ] 
+ } 
+  
+triGramDf <- sortGramDf(triGramDf) 
+ 
+```
+
+
+```{r echo=TRUE}
+## Other Sample code
+
+gramTokenizer <- function(n) { 
+NGramTokenizer(ovid, Weka_control(min = n, max = n, delimiters = " \\r\\n\\t.,;:\"()?!")) 
+} 
+
+  
+oneGram <- gramTokenizer(1) 
+biGram <- gramTokenizer(2) 
+triGram <- gramTokenizer(3) 
+  
+oneGramDf <- data.frame(table(oneGram)) 
+biGramDf <- data.frame(table(biGram)) 
+triGramDf <- data.frame(table(triGram)) 
+  
+sanitizeGramDf <- function(df) { 
+newDf <- data.frame(Term = as.character(df[, 1]), Count = df[, 2]) 
+newDf 
+} 
+  
+ oneGramDf <- sanitizeGramDf(oneGramDf) 
+ biGramDf <- sanitizeGramDf(biGramDf) 
+ triGramDf <- sanitizeGramDf(triGramDf) 
+  
+ sortGramDf <- function(df) { 
+ df[order(df$Count, decreasing = TRUE), ] 
+ } 
+  
+ oneGramDf <- sortGramDf(oneGramDf) 
+ biGramDf <- sortGramDf(biGramDf) 
+ triGramDf <- sortGramDf(triGramDf) 
+  
+ reductionRows <- c(1: 30) 
+ oneGramDfReduced <- oneGramDf[reductionRows, ] 
+ biGramDfReduced <- biGramDf[reductionRows, ] 
+ triGramDfReduced <- triGramDf[reductionRows, ] 
+
+```

@@ -109,9 +109,9 @@ A Corpus is created based on the 3 samples.
 ```{r, echo=TRUE}
 set.seed(190321)
 
-dtBL_sample <- sample(rdBL, length(rdBL)*.03)
-dtNW_sample <- sample(rdNW, length(rdNW)*.03)
-dtTW_sample <- sample(rdTW, length(rdTW)*.03)
+dtBL_sample <- sample(rdBL, length(rdBL)*.04)
+dtNW_sample <- sample(rdNW, length(rdNW)*.04)
+dtTW_sample <- sample(rdTW, length(rdTW)*.04)
 
 combined_sample <- c(dtBL_sample, dtNW_sample, dtTW_sample)
 combined_sample <- iconv(combined_sample, "UTF-8","ASCII", sub="")
@@ -119,7 +119,7 @@ combined_sample <- iconv(combined_sample, "UTF-8","ASCII", sub="")
 length(combined_sample)
 
 #Clear memory by removing unwanted dataframes
-#rm(dtBL_sample, dtNW_sample, dtTW_sample, rdBL, rdNW, rdTW)
+rm(dtBL_sample, dtNW_sample, dtTW_sample, rdBL, rdNW, rdTW)
 ```
 ### Exploration and Data Cleaning
 
@@ -174,7 +174,7 @@ bigram_freq <- data.frame(word=names(bigram_freq[bigram_ord]), frequency=bigram_
 
 trigram <- function(x) NGramTokenizer(x, Weka_control(min = 3, max = 3))
 trigram_tdm <- TermDocumentMatrix(corpus, control = list(tokenize = trigram))
-trigram_freqTerm <- findFreqTerms(trigram_tdm,lowfreq=10)
+trigram_freqTerm <- findFreqTerms(trigram_tdm,lowfreq=5)
 trigram_freq <- rowSums(as.matrix(trigram_tdm[trigram_freqTerm,]))
 trigram_ord <- order(trigram_freq, decreasing = TRUE)
 trigram_freq <- data.frame(word=names(trigram_freq[trigram_ord]), frequency=trigram_freq[trigram_ord])
@@ -231,8 +231,9 @@ ggplot(quadgram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency)
 ### Findings
 - It's a huge data, inititially I tried picking 10% of sample data then 5% of sample data, but encounter memory warnings, hence finalized on 3% sample data.
 
-- 100099
 - There are still some accents that weren’t completely removed in the cleaning step; it would be cleaner for the algorithm to remove those in a second cleaning round.
+
+- There are still converted NA values, should be removed in second round.
 
 - The longer the N-gram, the less frequent they become.
 
@@ -243,6 +244,6 @@ ggplot(quadgram_freq[1:25,], aes(factor(word, levels = unique(word)), frequency)
 
 ```{r, echo=TRUE}
 #Close connection
-rm(corpus)
-rm(conBL, conNW, conTW)
+#rm(corpus)
+#rm(conBL, conNW, conTW)
 ```
