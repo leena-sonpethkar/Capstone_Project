@@ -1,0 +1,26 @@
+---
+title: "About Text Prediction Model"
+author: "Leena Sonpethkar"
+date: "April 28, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This application is developed as part of the requirement for the **Coursera Data Science Capstone Project**. 
+
+The goal of the project is to build a predictive text model combined with a shiny app UI that will predict the next word as the user types a sentence.
+
+### How it works
+
+1. Upon initial load up of the application, **Predicted next word** will be blank.
+
+2. To begin the next word prediction, User may then enter a partially complete sentence in the input box given on the left side panel.
+
+3. Next word predicted is shown at the **Predicted Next Word**.
+
+
+
+
