@@ -1,0 +1,86 @@
+---
+title: "Data Science Capstone Project: Text Prediction Model"
+author: "Leena Sonpethkar"
+date: "April 29, 2021"
+output: slidy_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+##SwiftKey Capstone Project: Text Prediction Model
+
+###Synopsis
+
+This application is developed as part of the requirement for the **Coursera Data Science Capstone Project**. 
+
+The goal of the project is to build a product i.e. **"Predictive text model"** combined with a shiny app UI that will predict the next word as the user types a sentence.
+
+This project is to highlight the prediction algorithm that has been built and provided an interface that can be accessed by others.
+
+##Data Sampling And Cleaning {.smaller}
+
+Data has been derived from 3 text files *blogs, news & twitter*.
+Entire dataset has not been used to build algorithms due to huge data volume.
+
+Data cleansing has been done as below:
+
+- Covert all letters to lower-case
+
+- Remove strings with “http://”, “https://”, begin with @, etc
+
+- Replace all non alphanumeric letters with space
+
+- Remove excessive spaces
+
+- Split text at space to get 1-gram dictionary
+
+Also libraries to tokenize the text (omitting stopwords) can be used. 
+For twitter text we could use function tokenize_tweets().
+```{r, eval=FALSE, echo=TRUE}
+  library(tokenizers)
+  library(stopwords)
+  tokenize_words(<text>, stopwords=stopwords::stopwords("en"))
+```
+
+##N-Gram Dictionary {.smaller}
+
+Get 2-grams and 3-grams (with stopwords).
+```{r, eval=FALSE, echo=TRUE}
+tokenize_ngrams(<text>, n_min=2, n=3)
+```
+
+To reduce the N-gram dictionary size, first calculate frequency for each N-gram, then abandon the least frequent ones (the long tail), say the ones only cover 10% of occurrences or the ones that only appear once in the text corpus. 
+
+###About Source Code: {.smaller}
+
+I am using tm and RWeka packages for this assignment.
+For sampling, I have used 50% of the data from text files for Unigram, Bigram & Trigram. While for Quadgram I have used only 25% of the data. I had to compromise on sample data to avoid long running code in memory.
+
+Please find my source code 
+
+- For shiny app:
+https://github.com/leena-sonpethkar/Capstone_Project/tree/master/Text_Predict
+
+- For data reading, sampling and cleaning: https://github.com/leena-sonpethkar/Capstone_Project
+
+
+##Shiny UI {.smaller}
+The Shiny app uses 3-gram dictionary. It will match the last two words of an input with the first two words of entries in the dictionary, to predict the third word. If no entries found, it will instead match the last word of the input only. If no entries found again, it will return the most frequent 3-grams as result else **?**.
+
+You can launch the app: https://leena-sonpethkar.shinyapps.io/Text_Predict_Model/
+
+###How it works
+
+1. Upon initial load up of the application, **Predicted next word** will be blank.
+
+2. To begin the next word prediction, User may then enter a partially complete sentence in the input box given on the left side panel.
+
+3. Next word predicted is shown at the **Predicted Next Word**.
+
+##Thank You {.bigger}
+
+<div class="centered">
+Thank you so much for your interest and attention!
+</div>
